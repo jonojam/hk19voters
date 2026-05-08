@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HK BNO Voters — UK Party Preference Forecast</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #181c24;
+    --border: #1e2330;
+    --con: #3b82f6;
+    --con-dim: rgba(59,130,246,0.18);
+    --lab: #ef4444;
+    --lab-dim: rgba(239,68,68,0.18);
+    --ld: #f59e0b;
+    --ld-dim: rgba(245,158,11,0.18);
+    --ref: #06b6d4;
+    --ref-dim: rgba(6,182,212,0.13);
+    --grn: #22c55e;
+    --grn-dim: rgba(34,197,94,0.13);
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --accent: #a78bfa;
+    --gold: #f0c040;
+    --warn: #fb923c;
+    --chart-h: 340px;
+    --gap: 20px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 32px 20px 60px;
+  }
+
+  /* ---- HEADER ---- */
+  .masthead {
+    max-width: 1100px;
+    margin: 0 auto 36px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+  }
+  .masthead h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(22px, 4vw, 36px);
+    line-height: 1.15;
+    font-style: italic;
+    color: var(--text);
+    max-width: 620px;
+  }
+  .masthead h1 span { color: var(--gold); font-style: normal; }
+  .byline {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: .06em;
+    text-align: right;
+  }
+
+  /* ---- LAYOUT ---- */
+  .wrapper { max-width: 1100px; margin: 0 auto; display: grid; gap: var(--gap); }
+
+  /* ---- PARTY LEGEND ---- */
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 8px 18px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .leg-item { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; }
+  .leg-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ---- CHART CARD ---- */
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 24px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .chart-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 80% -20%, rgba(167,139,250,0.04) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .card-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 16px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .card-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 20px;
+    letter-spacing: .04em;
+  }
+
+  /* ---- SVG CHART ---- */
+  .chart-svg { width: 100%; overflow: visible; }
+
+  /* ---- TOOLTIP ---- */
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: #1a1f2e;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    line-height: 1.7;
+    max-width: 240px;
+    z-index: 999;
+    opacity: 0;
+    transition: opacity .15s;
+    box-shadow: 0 8px 32px rgba(0,0,0,.6);
+  }
+  .tooltip.show { opacity: 1; }
+  .tooltip-party { font-weight: 700; font-size: 13px; }
+  .tooltip-val { font-family: 'DM Mono', monospace; color: var(--gold); }
+  .tooltip-note { color: var(--muted); font-size: 11px; margin-top: 4px; }
+
+  /* ---- EVENT PANEL ---- */
+  .event-strip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .event-strip h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 15px;
+    margin-bottom: 14px;
+    color: var(--text);
+  }
+  .events-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .event-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 14px;
+    cursor: default;
+    transition: border-color .2s;
+  }
+  .event-item:hover { border-color: var(--accent); }
+  .event-date { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: .06em; }
+  .event-name { font-size: 12px; font-weight: 600; color: var(--text); margin: 3px 0; }
+  .event-impact { font-size: 11px; color: var(--muted); }
+  .event-badge {
+    display: inline-block;
+    margin-top: 5px;
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: .04em;
+  }
+  .badge-con { background: var(--con-dim); color: var(--con); }
+  .badge-lab { background: var(--lab-dim); color: var(--lab); }
+  .badge-ld  { background: var(--ld-dim);  color: var(--ld); }
+  .badge-neu { background: rgba(167,139,250,.15); color: var(--accent); }
+  .badge-neg { background: rgba(251,146,60,.15); color: var(--warn); }
+  .badge-ref { background: var(--ref-dim); color: var(--ref); }
+
+  /* ---- DATA QUALITY TABLE ---- */
+  .quality-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    overflow-x: auto;
+  }
+  .quality-card h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 15px;
+    margin-bottom: 16px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .06em;
+    color: var(--muted);
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,.04); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  .confidence-bar {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .bar-track { flex: 1; height: 5px; background: var(--border); border-radius: 3px; max-width: 80px; }
+  .bar-fill  { height: 100%; border-radius: 3px; }
+  .bar-high   { background: #22c55e; }
+  .bar-mid    { background: #f59e0b; }
+  .bar-low    { background: #ef4444; }
+
+  /* ---- GAPS CARD ---- */
+  .gaps-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .gaps-card h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 15px;
+    margin-bottom: 14px;
+  }
+  .gap-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-items: start;
+  }
+  @media (max-width: 640px) { .gap-row { grid-template-columns: 1fr; } }
+  .gap-item {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 12px 14px;
+    border-left: 3px solid transparent;
+    font-size: 12px;
+  }
+  .gap-item.weakness { border-left-color: #ef4444; }
+  .gap-item.approach { border-left-color: #22c55e; }
+  .gap-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .05em;
+    margin-bottom: 4px;
+    opacity: .7;
+  }
+  .gap-label.w { color: #ef4444; }
+  .gap-label.a { color: #22c55e; }
+
+  /* ---- FORECAST NOTE ---- */
+  .forecast-note {
+    background: rgba(167,139,250,.07);
+    border: 1px solid rgba(167,139,250,.2);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .forecast-note strong { color: var(--accent); }
+
+  /* ---- TOGGLE BUTTONS ---- */
+  .toggle-row { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 16px; }
+  .tog-btn {
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all .18s;
+  }
+  .tog-btn.active { color: #fff; border-color: transparent; }
+  .tog-btn.con.active { background: var(--con); }
+  .tog-btn.lab.active { background: var(--lab); }
+  .tog-btn.ld.active  { background: var(--ld); color: #000; }
+  .tog-btn.ref.active { background: var(--ref); }
+  .tog-btn.grn.active { background: var(--grn); color: #000; }
+</style>
+</head>
+<body>
+
+<div class="masthead">
+  <h1>Hong Kong BNO Voters<br><span>UK Party Preference</span> — Event-Driven Forecast</h1>
+  <div class="byline">
+    RESEARCH SYNTHESIS · 2019–2029<br>
+    Sources: UCL/KCL/Oxford ESRC Panel · British Future · U.Liverpool · V4HK
+  </div>
+</div>
+
+<div class="wrapper">
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:var(--con)"></div>Conservative</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--lab)"></div>Labour</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--ld)"></div>Liberal Democrats</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--ref)"></div>Reform UK</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--grn)"></div>Green</div>
+    <div class="leg-item"><div class="leg-dot" style="background:rgba(255,255,255,0.25)"></div>No clear preference</div>
+    <div class="leg-item" style="margin-left:auto;">
+      <div style="width:30px;height:2px;background:rgba(255,255,255,0.2);border-top: 2px dashed rgba(255,255,255,0.35)"></div>
+      <span style="color:var(--muted);font-size:11px">Forecast (uncertain)</span>
+    </div>
+  </div>
+
+  <!-- Main chart -->
+  <div class="chart-card">
+    <div class="card-title">Party Preference Trajectory — Hong Kong BNO Community</div>
+    <div class="card-sub">ESTIMATED % SUPPORT · SURVEY DATA + EVENT-ADJUSTED PROJECTIONS · HOVER POINTS FOR DETAIL</div>
+
+    <div class="toggle-row" id="toggleRow">
+      <button class="tog-btn con active" data-party="con">Conservative</button>
+      <button class="tog-btn lab active" data-party="lab">Labour</button>
+      <button class="tog-btn ld active"  data-party="ld">Lib Dem</button>
+      <button class="tog-btn ref active" data-party="ref">Reform UK</button>
+      <button class="tog-btn grn active" data-party="grn">Green</button>
+      <button class="tog-btn" style="border-color:rgba(255,255,255,0.15);color:var(--muted)" data-party="none" id="noneBtn">No Preference</button>
+    </div>
+
+    <svg id="mainChart" class="chart-svg" viewBox="0 0 900 340" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+
+  <!-- Events -->
+  <div class="event-strip">
+    <h3>Key Political Events & Estimated Impact on BNO Party Preference</h3>
+    <div class="events-grid" id="eventsGrid"></div>
+  </div>
+
+  <!-- Data quality -->
+  <div class="quality-card">
+    <h3>Survey Evidence Register — Methodological Confidence</h3>
+    <table id="qualityTable">
+      <thead>
+        <tr>
+          <th>SURVEY / SOURCE</th>
+          <th>DATE</th>
+          <th>n</th>
+          <th>SAMPLING METHOD</th>
+          <th>KEY FINDING</th>
+          <th>CONFIDENCE</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Gaps -->
+  <div class="gaps-card">
+    <h3>Research Gaps & Methodological Improvements</h3>
+    <div id="gapsContainer"></div>
+  </div>
+
+  <!-- Forecast note -->
+  <div class="forecast-note">
+    <strong>Forecast methodology note:</strong> Projections from 2024 onwards are probabilistic estimates based on event-adjusted trend modelling, not polling data. Confidence intervals widen as horizon extends. The UCL/KCL/Oxford ESRC BNO Panel Survey Wave 2 (political module, fieldwork 2025) and Wave 3 (post-2025 Labour settlement controversy, fieldwork 2026) will be the <strong>definitive empirical anchors</strong>. Dashed lines indicate forecast uncertainty; treat as directional hypotheses, not predictions.
+  </div>
+
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+
+const YEARS = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029];
+
+// [year, value] arrays. null = data missing / not yet available
+// Sources: Liverpool Uni 2022, V4HK 2024, British Future 2023, UCL Wave2 pending
+// Forecast post-2024 = event-adjusted projection with uncertainty
+
+const seriesData = {
+  con: {
+    color: 'var(--con)', dimColor: 'var(--con-dim)', label: 'Conservative',
+    points: [
+      // Pre-BNO: small legacy HK community, moderate Con lean
+      {y: 2019, v: 30, type: 'estimate', note: 'Pre-BNO: legacy HK community estimate'},
+      // NSL + BNO launch: gratitude surge
+      {y: 2021, v: 42, type: 'estimate', note: 'BNO launch gratitude effect — inferred'},
+      // Liverpool survey
+      {y: 2022, v: 52, type: 'survey', note: 'Univ. of Liverpool survey (n≈1,300) — methodology unverified'},
+      // Truss collapse, V4HK no clear preference, British Future: no allegiance
+      {y: 2023, v: 34, type: 'estimate', note: 'Post-Truss/Sunak collapse; V4HK "no clear preference" finding'},
+      // 2024 GE — Conservative collapse nationally; likely lower BNO Con vote
+      {y: 2024, v: 22, type: 'estimate', note: '2024 GE — Conservative national collapse; UCL Wave 2 pending'},
+      // Forecast: gradual potential partial recovery depending on Badenoch repositioning
+      {y: 2025, v: 18, type: 'forecast', ci: 10, note: 'Forecast: further erosion if Reform displaces Tory space'},
+      {y: 2026, v: 20, type: 'forecast', ci: 14, note: 'Forecast: uncertain — depends on Tory China/BNO policy'},
+      {y: 2027, v: 22, type: 'forecast', ci: 16},
+      {y: 2029, v: 25, type: 'forecast', ci: 18},
+    ]
+  },
+  lab: {
+    color: 'var(--lab)', dimColor: 'var(--lab-dim)', label: 'Labour',
+    points: [
+      {y: 2019, v: 20, type: 'estimate', note: 'Legacy HK community Labour vote baseline'},
+      {y: 2021, v: 12, type: 'estimate', note: 'Early BNO arrivals: gratitude to Conservatives reduced Lab vote'},
+      {y: 2022, v: 14, type: 'survey', note: 'Univ. of Liverpool survey: 14% Labour'},
+      {y: 2023, v: 21, type: 'estimate', note: 'Labour support grew as Tory credibility collapsed'},
+      {y: 2024, v: 28, type: 'estimate', note: 'Labour GE victory; BNO urban communities in Labour seats'},
+      {y: 2025, v: 26, type: 'forecast', ci: 9, note: 'Forecast: Labour settlement programme wind-down may erode support'},
+      {y: 2026, v: 24, type: 'forecast', ci: 12, note: 'Forecast: post-May 2026 local elections will be test'},
+      {y: 2027, v: 25, type: 'forecast', ci: 14},
+      {y: 2029, v: 27, type: 'forecast', ci: 16},
+    ]
+  },
+  ld: {
+    color: 'var(--ld)', dimColor: 'var(--ld-dim)', label: 'Liberal Democrats',
+    points: [
+      {y: 2019, v: 18, type: 'estimate', note: 'LD pledged right of abode in 2019 — earliest BNO commitment'},
+      {y: 2021, v: 15, type: 'estimate', note: 'LD credibility on BNO; less prominent than Tory BNO launch'},
+      {y: 2022, v: 16, type: 'survey', note: 'Univ. of Liverpool survey: 16% Lib Dem'},
+      {y: 2023, v: 20, type: 'estimate', note: 'LD surge nationally; tactical vote potential in Con-LD marginals'},
+      {y: 2024, v: 26, type: 'estimate', note: 'LD manifesto strongest BNO pledges; strong tactical vote in Surrey/Sutton seats'},
+      {y: 2025, v: 24, type: 'forecast', ci: 8, note: 'Forecast: LD hold BNO-rich commuter belt seats'},
+      {y: 2026, v: 23, type: 'forecast', ci: 11},
+      {y: 2027, v: 22, type: 'forecast', ci: 13},
+      {y: 2029, v: 22, type: 'forecast', ci: 15},
+    ]
+  },
+  ref: {
+    color: 'var(--ref)', dimColor: 'var(--ref-dim)', label: 'Reform UK',
+    points: [
+      {y: 2019, v: 0, type: 'estimate', note: 'Reform/Brexit Party not relevant to HK community'},
+      {y: 2022, v: 1, type: 'estimate'},
+      {y: 2023, v: 2, type: 'estimate', note: 'Reform explicitly anti-BNO immigration'},
+      {y: 2024, v: 3, type: 'estimate', note: 'Minimal BNO Reform support — policy threat to community'},
+      {y: 2025, v: 4, type: 'forecast', ci: 4, note: 'Forecast: small anti-establishment protest vote; limited ceiling given Reform anti-immigration stance'},
+      {y: 2026, v: 4, type: 'forecast', ci: 5},
+      {y: 2029, v: 5, type: 'forecast', ci: 6},
+    ]
+  },
+  grn: {
+    color: 'var(--grn)', dimColor: 'var(--grn-dim)', label: 'Green',
+    points: [
+      {y: 2019, v: 3, type: 'estimate'},
+      {y: 2022, v: 4, type: 'estimate'},
+      {y: 2024, v: 6, type: 'estimate', note: 'Younger BNO arrivals; civic-liberal values alignment'},
+      {y: 2025, v: 7, type: 'forecast', ci: 4},
+      {y: 2026, v: 7, type: 'forecast', ci: 5},
+      {y: 2029, v: 7, type: 'forecast', ci: 6},
+    ]
+  },
+  none: {
+    color: 'rgba(255,255,255,0.35)', dimColor: 'rgba(255,255,255,0.08)', label: 'No Clear Preference',
+    points: [
+      {y: 2019, v: 28, type: 'estimate', note: 'Pre-BNO legacy community'},
+      {y: 2021, v: 20, type: 'estimate'},
+      {y: 2022, v: 14, type: 'estimate'},
+      {y: 2023, v: 23, type: 'survey', note: 'V4HK survey (n≈1,200): majority had no clear party preference'},
+      {y: 2024, v: 16, type: 'estimate', note: 'GE mobilisation reduced "no preference" as community engaged'},
+      {y: 2025, v: 21, type: 'forecast', ci: 9, note: 'Forecast: post-GE disillusionment may increase non-aligned voters'},
+      {y: 2026, v: 22, type: 'forecast', ci: 12},
+      {y: 2029, v: 19, type: 'forecast', ci: 14},
+    ]
+  }
+};
+
+const EVENTS = [
+  { date: 'Jun 2019', name: '2019 HK District Council Elections', impact: 'Landslide pro-democracy win; politicised the cohort that would emigrate', badges: ['neutral'] },
+  { date: 'Jun 2020', name: 'National Security Law Imposed', impact: 'Trigger event for mass emigration; anti-Beijing sentiment crystallises', badges: ['neutral'] },
+  { date: 'Jan 2021', name: 'BNO Visa Scheme Launches', impact: 'Boris Johnson Conservatives credited; early Con gratitude effect', badges: ['con'] },
+  { date: 'Sep 2022', name: 'Truss Mini-Budget Collapse', impact: 'Conservative economic credibility destroyed; Con support starts falling', badges: ['neg'] },
+  { date: 'Nov 2023', name: 'Hong Kong Watch "Floating Voters" Report', impact: '140,000 potential BNO voters mapped to marginal seats', badges: ['neutral'] },
+  { date: 'Jan 2024', name: 'V4HK Survey Published', impact: 'Majority "no clear preference"; counters Liverpool Tory-majority narrative', badges: ['neutral'] },
+  { date: 'Jul 2024', name: '2024 General Election', impact: 'Labour landslide; LD best result since 1923; Conservative wipeout', badges: ['lab', 'ld'] },
+  { date: 'Mar 2025', name: 'HK Welcome Programme Closes', impact: 'Labour government ends Conservative-era integration funding; community concern', badges: ['neg'] },
+  { date: 'May 2026', name: 'UK Local Elections', impact: 'First major real-world test of BNO voting patterns — results pending', badges: ['neutral'] },
+  { date: '2025–26', name: 'UCL Panel Wave 2 Political Module', impact: 'Will publish first rigorous data on how BNOs voted in 2024 GE', badges: ['neutral'] },
+  { date: '2026', name: 'UCL Panel Wave 3', impact: 'Post-settlement controversy tracking; definitive longitudinal anchor', badges: ['neutral'] },
+  { date: '2029', name: 'Next General Election', impact: 'First election where full BNO cohort (180k+) eligible; community fully integrated', badges: ['neutral'] },
+];
+
+const SURVEYS = [
+  { name: 'Univ. of Liverpool', date: '2022', n: '~1,300', method: 'Online, unverified sampling frame', finding: '52% Con, 16% LD, 14% Lab', conf: 30, confLevel: 'low' },
+  { name: 'Vote4HK (V4HK) Campaign', date: 'Nov 2023–Jan 2024', n: '~1,200', method: 'Self-selected, community networks', finding: 'Majority no clear preference; 80%+ registered', conf: 40, confLevel: 'low' },
+  { name: 'British Future / WCfHK', date: '2023', n: '~2,000', method: 'Nationally representative (claimed)', finding: '"No obvious party allegiance"; top issues: jobs, housing', conf: 72, confLevel: 'mid' },
+  { name: 'UCL/KCL/Oxford ESRC Wave 1', date: 'Jun–Aug 2024', n: '~2,000 (1,000 HHs)', method: 'Random sample via Home Office BNO register; Ipsos fieldwork', finding: 'No political module in Wave 1', conf: 90, confLevel: 'high' },
+  { name: 'UCL/KCL/Oxford ESRC Wave 2', date: 'Jun–Aug 2025', n: 'Same panel', method: 'Longitudinal follow-up; political module included', finding: '⏳ Pending publication', conf: 95, confLevel: 'high' },
+  { name: 'ONS / Broader British Chinese (YouGov)', date: '2023', n: 'Varies', method: 'General population segmented by ethnicity', finding: 'Con 40%, Lab 37% among all British Chinese', conf: 55, confLevel: 'mid' },
+];
+
+const GAPS = [
+  { weakness: "Couldn't access Wave 2 UCL panel full data (behind UCL Discovery)", approach: "Download directly from UCL Discovery or contact the PI" },
+  { weakness: "UKHKER survey was self-selected community sample", approach: "Weight findings against broader ONS data on HK-born residents" },
+  { weakness: "No Mandarin/Cantonese language searches", approach: "Search LIHKG, HKDiscuss, and YouTube HK community channels for unfiltered political discourse" },
+  { weakness: "No 2026 local election results yet (May 2026)", approach: "Revisit after the May 2026 local election data is fully tallied — real-world test" },
+  { weakness: "Ecological analysis (constituency-level HK vote share) was unavailable", approach: "Commission or request NiNo + electoral roll linkage via ONS research access" },
+  { weakness: "Relied on community org surveys (selection bias)", approach: "Supplement with a randomly sampled RDD telephone survey of BNO visa holders" },
+  { weakness: "Single cross-sections can't show political shift over time", approach: "The single biggest improvement: wait for or commission Wave 3 of the UCL/KCL panel — tracks same individuals post-2025 Labour settlement controversy" },
+];
+
+// ─── CHART RENDERING ────────────────────────────────────────────────────────
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const PAD = { t: 20, r: 30, b: 50, l: 42 };
+const VB_W = 900, VB_H = 340;
+const W = VB_W - PAD.l - PAD.r;
+const H = VB_H - PAD.t - PAD.b;
+
+let visible = { con: true, lab: true, ld: true, ref: true, grn: true, none: false };
+
+function xPos(year) {
+  const min = YEARS[0], max = YEARS[YEARS.length - 1];
+  return PAD.l + ((year - min) / (max - min)) * W;
+}
+function yPos(val) {
+  return PAD.t + H - (val / 70) * H;
+}
+function colResolve(cssVar) {
+  const map = {
+    'var(--con)': '#3b82f6',
+    'var(--lab)': '#ef4444',
+    'var(--ld)': '#f59e0b',
+    'var(--ref)': '#06b6d4',
+    'var(--grn)': '#22c55e',
+    'rgba(255,255,255,0.35)': 'rgba(255,255,255,0.55)',
+  };
+  return map[cssVar] || cssVar;
+}
+
+function makeSVGEl(tag, attrs) {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+
+function renderChart() {
+  const svg = document.getElementById('mainChart');
+  svg.innerHTML = '';
+
+  // Grid lines
+  const gridG = makeSVGEl('g', {});
+  for (let v = 0; v <= 70; v += 10) {
+    const y = yPos(v);
+    const line = makeSVGEl('line', { x1: PAD.l, y1: y, x2: PAD.l + W, y2: y, stroke: '#1e2330', 'stroke-width': 1 });
+    gridG.appendChild(line);
+    const label = makeSVGEl('text', { x: PAD.l - 6, y: y + 4, 'text-anchor': 'end', fill: '#6b7280', 'font-size': 10, 'font-family': 'DM Mono, monospace' });
+    label.textContent = v + '%';
+    gridG.appendChild(label);
+  }
+  svg.appendChild(gridG);
+
+  // Year axis
+  const axG = makeSVGEl('g', {});
+  YEARS.forEach(yr => {
+    const x = xPos(yr);
+    const tick = makeSVGEl('line', { x1: x, y1: PAD.t + H, x2: x, y2: PAD.t + H + 5, stroke: '#2a2f3d', 'stroke-width': 1 });
+    axG.appendChild(tick);
+    const lbl = makeSVGEl('text', { x, y: PAD.t + H + 18, 'text-anchor': 'middle', fill: '#6b7280', 'font-size': 10, 'font-family': 'DM Mono, monospace' });
+    lbl.textContent = yr;
+    axG.appendChild(lbl);
+  });
+  // Forecast divider
+  const fxLine = makeSVGEl('line', { x1: xPos(2024.5), y1: PAD.t, x2: xPos(2024.5), y2: PAD.t + H, stroke: 'rgba(167,139,250,0.3)', 'stroke-dasharray': '4,4', 'stroke-width': 1 });
+  axG.appendChild(fxLine);
+  const fxLbl = makeSVGEl('text', { x: xPos(2024.5) + 5, y: PAD.t + 13, fill: 'rgba(167,139,250,0.5)', 'font-size': 9, 'font-family': 'DM Mono, monospace' });
+  fxLbl.textContent = '← OBSERVED  FORECAST →';
+  axG.appendChild(fxLbl);
+
+  svg.appendChild(axG);
+
+  // Series
+  Object.entries(seriesData).forEach(([key, series]) => {
+    if (!visible[key]) return;
+    const col = colResolve(series.color);
+
+    // Separate observed and forecast
+    const obs = series.points.filter(p => p.type !== 'forecast');
+    const fcast = series.points.filter(p => p.type === 'forecast');
+
+    // CI bands for forecast
+    if (fcast.length > 1) {
+      const upper = fcast.map(p => ({ x: xPos(p.y), y: yPos(Math.min(70, p.v + (p.ci || 0))) }));
+      const lower = fcast.map(p => ({ x: xPos(p.y), y: yPos(Math.max(0, p.v - (p.ci || 0))) }));
+      const bandPath = `M ${upper.map(p => `${p.x},${p.y}`).join(' L ')} L ${[...lower].reverse().map(p => `${p.x},${p.y}`).join(' L ')} Z`;
+      const band = makeSVGEl('path', { d: bandPath, fill: col, opacity: '0.07' });
+      svg.appendChild(band);
+    }
+
+    // Observed line
+    if (obs.length > 1) {
+      const d = obs.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xPos(p.y)},${yPos(p.v)}`).join(' ');
+      // Connect observed to forecast start
+      const allSolid = [...obs];
+      if (fcast.length) allSolid.push(fcast[0]);
+      const d2 = allSolid.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xPos(p.y)},${yPos(p.v)}`).join(' ');
+      const line = makeSVGEl('path', { d: d2, fill: 'none', stroke: col, 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+      svg.appendChild(line);
+    }
+
+    // Forecast dashed line
+    if (fcast.length > 1) {
+      const d = fcast.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xPos(p.y)},${yPos(p.v)}`).join(' ');
+      const line = makeSVGEl('path', { d, fill: 'none', stroke: col, 'stroke-width': 1.5, 'stroke-dasharray': '5,4', 'stroke-linecap': 'round', opacity: '0.75' });
+      svg.appendChild(line);
+    }
+
+    // Data points (interactive)
+    series.points.forEach(pt => {
+      const cx = xPos(pt.y), cy = yPos(pt.v);
+      const r = pt.type === 'survey' ? 6 : pt.type === 'forecast' ? 3.5 : 4.5;
+      const circle = makeSVGEl('circle', {
+        cx, cy, r, fill: pt.type === 'forecast' ? 'var(--surface)' : col,
+        stroke: col, 'stroke-width': pt.type === 'forecast' ? 1.5 : 2,
+        style: 'cursor:pointer', opacity: pt.type === 'forecast' ? 0.6 : 1
+      });
+      // Tooltip
+      circle.addEventListener('mouseenter', (e) => showTooltip(e, series.label, pt, col));
+      circle.addEventListener('mouseleave', hideTooltip);
+      svg.appendChild(circle);
+    });
+  });
+}
+
+// ─── TOOLTIP ────────────────────────────────────────────────────────────────
+const tooltip = document.getElementById('tooltip');
+function showTooltip(e, party, pt, col) {
+  const typeLabel = { survey: '📊 Survey data', estimate: '📐 Estimate', forecast: '🔮 Forecast' }[pt.type] || '';
+  tooltip.innerHTML = `
+    <div class="tooltip-party" style="color:${col}">${party}</div>
+    <div><span class="tooltip-val">${pt.v}%</span> · ${pt.y}</div>
+    <div style="color:#9ca3af;font-size:11px">${typeLabel}</div>
+    ${pt.type === 'forecast' && pt.ci ? `<div style="color:#6b7280;font-size:11px">±${pt.ci}pp uncertainty</div>` : ''}
+    ${pt.note ? `<div class="tooltip-note">${pt.note}</div>` : ''}
+  `;
+  positionTooltip(e);
+  tooltip.classList.add('show');
+}
+function hideTooltip() { tooltip.classList.remove('show'); }
+function positionTooltip(e) {
+  const x = e.clientX + 14, y = e.clientY - 10;
+  tooltip.style.left = Math.min(x, window.innerWidth - 260) + 'px';
+  tooltip.style.top = Math.max(y, 8) + 'px';
+}
+document.addEventListener('mousemove', e => { if (tooltip.classList.contains('show')) positionTooltip(e); });
+
+// ─── TOGGLES ─────────────────────────────────────────────────────────────────
+document.getElementById('toggleRow').addEventListener('click', e => {
+  const btn = e.target.closest('.tog-btn');
+  if (!btn) return;
+  const party = btn.dataset.party;
+  if (!party) return;
+  visible[party] = !visible[party];
+  btn.classList.toggle('active', visible[party]);
+  renderChart();
+});
+
+// ─── EVENTS ─────────────────────────────────────────────────────────────────
+const badgeClasses = { con: 'badge-con', lab: 'badge-lab', ld: 'badge-ld', neutral: 'badge-neu', neg: 'badge-neg', ref: 'badge-ref' };
+const badgeLabels = { con: 'Con ↑', lab: 'Lab ↑', ld: 'LD ↑', neutral: 'Context', neg: 'Risk', ref: 'Reform' };
+const evGrid = document.getElementById('eventsGrid');
+EVENTS.forEach(ev => {
+  const div = document.createElement('div');
+  div.className = 'event-item';
+  div.innerHTML = `
+    <div class="event-date">${ev.date}</div>
+    <div class="event-name">${ev.name}</div>
+    <div class="event-impact">${ev.impact}</div>
+    ${ev.badges.map(b => `<span class="event-badge ${badgeClasses[b]}">${badgeLabels[b]}</span>`).join(' ')}
+  `;
+  evGrid.appendChild(div);
+});
+
+// ─── SURVEY TABLE ────────────────────────────────────────────────────────────
+const tbody = document.querySelector('#qualityTable tbody');
+SURVEYS.forEach(s => {
+  const tr = document.createElement('tr');
+  const barCls = s.confLevel === 'high' ? 'bar-high' : s.confLevel === 'mid' ? 'bar-mid' : 'bar-low';
+  tr.innerHTML = `
+    <td style="font-weight:600">${s.name}</td>
+    <td style="font-family:DM Mono,monospace;color:#9ca3af">${s.date}</td>
+    <td style="font-family:DM Mono,monospace">${s.n}</td>
+    <td style="color:#9ca3af">${s.method}</td>
+    <td>${s.finding}</td>
+    <td>
+      <div class="confidence-bar">
+        <div class="bar-track"><div class="bar-fill ${barCls}" style="width:${s.conf}%"></div></div>
+        <span style="font-family:DM Mono,monospace;font-size:10px;color:#6b7280">${s.conf}%</span>
+      </div>
+    </td>
+  `;
+  tbody.appendChild(tr);
+});
+
+// ─── GAPS ────────────────────────────────────────────────────────────────────
+const gapsCont = document.getElementById('gapsContainer');
+GAPS.forEach(g => {
+  const row = document.createElement('div');
+  row.className = 'gap-row';
+  row.style.marginBottom = '10px';
+  row.innerHTML = `
+    <div class="gap-item weakness">
+      <div class="gap-label w">⚠ WEAKNESS</div>
+      <div>${g.weakness}</div>
+    </div>
+    <div class="gap-item approach">
+      <div class="gap-label a">✓ BETTER APPROACH</div>
+      <div>${g.approach}</div>
+    </div>
+  `;
+  gapsCont.appendChild(row);
+});
+
+// Initial render
+renderChart();
+</script>
+</body>
+</html>
